@@ -36,21 +36,21 @@ python3 skills/session-extractor/scripts/extract.py [--platform claude|codex|ope
 
 ## 输出结构
 
-结构对齐 `.agents-log`（meta 双树 + 全局 index/state/locks 均在 `meta/` 下）：
+结构对齐 `.agents-log`（无 `<platform>` 层；meta 双树 + 全局 index/state/locks 均在 `meta/` 下；summary 的外溢复用 meta 的 artifacts、summary 树自身不含 rendered）：
 ```
 .session-extractor/
-├─ summary/<platform>/<时间戳>/                # structured：人读总览（单本地时间戳文件夹）
+├─ summary/<时间戳>/                            # structured 人读总览（单时间戳，无 platform 层）
 │  ├─ summary.md  usage.json
-│  └─ agents/<key>/{summary.md,usage.json}
-├─ meta/                                       # structured：详细+取证+索引+状态
-│  ├─ index.md                                # 全局索引（所有会话）
-│  ├─ state/<platform>__<sid>.json            # 幂等状态（产物相对路径）
-│  ├─ locks/                                  # 会话级文件锁
-│  └─ sessions/<platform>/YYYY/MM/<sid>/
+│  └─ agents/<key>/{summary.md,usage.json}     # 外溢复用 meta 的 artifacts、自身无 rendered
+├─ meta/                                       # structured 详细+取证+索引+状态
+│  ├─ index.md                                 # 全局索引（所有会话）
+│  ├─ state/<platform>__<sid>.json             # 幂等状态（产物相对路径）
+│  ├─ locks/                                   # 会话级文件锁
+│  └─ sessions/YYYY/MM/<sid>/                  # 无 platform 层；sid 全局唯一
 │     ├─ index.md  merged/session.md
 │     ├─ agents/<key>/session.md
-│     └─ artifacts/{shared,<key>}/rendered/
-└─ <platform>/<时间戳>/                         # flat：每 agent 一个大 md（单本地时间戳文件夹）
+│     └─ artifacts/{shared,<key>}/rendered/    # summary 与 detail 共用的外溢
+└─ <时间戳>/                                    # flat 每 agent 一个大 md（与 meta/summary 平级）
    ├─ index.md  main.md  <subagent>.md  usage.json
 ```
 

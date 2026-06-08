@@ -169,10 +169,11 @@ def build_agent_summary(session: Session, agent: Agent, path: Path, store: R.Art
 def run_structured(session: Session, out_root: Path, state: dict[str, Any]) -> str:
     st = state.get("structured", {}) if isinstance(state.get("structured"), dict) else {}
     yyyy, mm = _ym(session.started_at)
-    meta_dir_rel = st.get("meta_session_dir") or f"meta/sessions/{session.platform}/{yyyy}/{mm}/{session.session_id}"
-    # summary 用单个本地时间戳文件夹（对齐 .agents-log），不再 YYYY/MM/<sid> 多层。
+    # 对齐 .agents-log：meta/summary 均不含 <platform> 层（原版单平台），sid 全局唯一足以防撞。
+    meta_dir_rel = st.get("meta_session_dir") or f"meta/sessions/{yyyy}/{mm}/{session.session_id}"
+    # summary 用单个本地时间戳文件夹（对齐 .agents-log），不再 YYYY/MM/<sid> 多层、无 platform 层。
     # 确定性 + state 复用 + 无 _unique_dir -> state 丢失也不漂移、不堆 -02（见 fail-loud 原则）。
-    summary_dir_rel = st.get("summary_dir") or f"summary/{session.platform}/{_stamp(session)}"
+    summary_dir_rel = st.get("summary_dir") or f"summary/{_stamp(session)}"
     meta_dir = out_root / meta_dir_rel
     summary_dir = out_root / summary_dir_rel
 
@@ -181,7 +182,7 @@ def run_structured(session: Session, out_root: Path, state: dict[str, Any]) -> s
     _prune_agents(meta_dir / "agents", keys)
     _prune_agents(meta_dir / "artifacts", keys, reserved=("shared",))
     _prune_agents(summary_dir / "agents", keys)
-    _prune_agents(summary_dir / "artifacts", keys, reserved=("shared",))
+    # summary 不自带 artifacts（外溢复用 meta 树），无需 prune。
 
     meta_index = meta_dir / "index.md"
     merged = meta_dir / "merged" / "session.md"
@@ -209,10 +210,9 @@ def run_structured(session: Session, out_root: Path, state: dict[str, Any]) -> s
         {"merged": merged, "summary": root_summary, "usage": root_usage, "agents": agent_links},
     )
 
-    # root summary + usage
-    sum_store = R.ArtifactStore(_reset(summary_dir / "artifacts" / "shared" / "rendered"))
+    # root summary + usage（外溢复用 meta 的 shared artifacts store -> summary 树不自带 rendered，对齐 .agents-log）
     build_root_summary(
-        session, root_summary, sum_store,
+        session, root_summary, shared_store,
         {"meta_index": meta_index, "merged": merged, "usage": root_usage, "agents": agent_links},
     )
     R.write_json_file(root_usage, R.usage_payload(session, None))
@@ -225,8 +225,8 @@ def run_structured(session: Session, out_root: Path, state: dict[str, Any]) -> s
             links["detail"],
             build_detail_doc(session, agent.events, _decorate(session.title, agent.raw_id), R.Ctx(links["detail"], detail_store), show_source=False),
         )
-        summary_store = R.ArtifactStore(_reset(summary_dir / "artifacts" / agent.key / "rendered"))
-        build_agent_summary(session, agent, links["summary"], summary_store,
+        # agent summary 外溢复用该 agent 的 meta artifacts store（同一实例 -> 不互相 reset、同内容去重、summary 树无 rendered）
+        build_agent_summary(session, agent, links["summary"], detail_store,
                             {"detail": links["detail"], "index": meta_index, "usage": links["usage"]})
         R.write_json_file(links["usage"], R.usage_payload(session, agent))
 
@@ -286,8 +286,8 @@ def build_flat_index(session: Session, path: Path, agent_files: dict[str, str]) 
 
 def run_flat(session: Session, out_root: Path, state: dict[str, Any]) -> str:
     st = state.get("flat", {}) if isinstance(state.get("flat"), dict) else {}
-    # flat 用单个本地时间戳文件夹（与 summary、.agents-log 一致；单层日期）。
-    dir_rel = st.get("flat_session_dir") or f"{session.platform}/{_stamp(session)}"
+    # flat 用单个本地时间戳文件夹（与 summary 一致）：out_root 下单层时间戳，无 platform 层。
+    dir_rel = st.get("flat_session_dir") or f"{_stamp(session)}"
     sdir = out_root / dir_rel
 
     # 幂等收敛：清孤儿 artifacts/<key> 与孤儿 <key>.md（agent 集合缩小/key 重排）。
