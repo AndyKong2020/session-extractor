@@ -1,11 +1,11 @@
 ---
 name: session-extractor
-description: 把当前 agent 会话记录按需导出为 Markdown 到 .session-log/ 目录。当用户想保存、归档、快照当前会话，把对话/交互记录转成 markdown，生成 session log，或导出 transcript 时使用。支持 structured（默认，带 meta/summary 结构）与 flat（每 agent 一个大 md）两种形态、多次触发增量幂等、多 agent/subagent；跨 Claude Code / Codex / Opencode 三平台，自动判断当前客户端。
+description: 把当前 agent 会话记录按需导出为 Markdown 到 .session-extractor/ 目录。当用户想保存、归档、快照当前会话，把对话/交互记录转成 markdown，生成 session log，或导出 transcript 时使用。支持 structured（默认，带 meta/summary 结构）与 flat（每 agent 一个大 md）两种形态、多次触发增量幂等、多 agent/subagent；跨 Claude Code / Codex / Opencode 三平台，自动判断当前客户端。
 ---
 
 # Session Extractor
 
-把**当前会话**（或本项目历史会话）的原始记录转成结构化 Markdown，落到工作目录下的 `.session-log/`。
+把**当前会话**（或本项目历史会话）的原始记录转成结构化 Markdown，落到工作目录下的 `.session-extractor/`。
 非实时、无 hook：主动触发，可多次触发增量刷新（同一 session 始终写到同一目录，幂等覆盖）。
 
 何时用：用户说「把这次会话存成 markdown / 归档 / 快照 / 导出 transcript / 生成 session log」。
@@ -56,7 +56,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/session-extractor/scripts/extract.py" --pl
 `--platform` 用你第 1 步自行判断的结果显式传入。
 
 - `${CLAUDE_PLUGIN_ROOT}` 不可用时（非插件安装），用本 skill 目录下的相对路径 `scripts/extract.py`。
-- 默认导出**当前会话**到 `<cwd>/.session-log`；用 `--out DIR` 改目录。
+- 默认导出**当前会话**到 `<cwd>/.session-extractor`；用 `--out DIR` 改目录。
 - 脚本会：探测平台/定位 transcript → 解析（含 subagent、telemetry）→ 渲染 → **打印落点**。把落点回报给用户。
 - 退出码非 0 表示失败（如未显式指定 `--platform` 且 env 无法判断 / 找不到 session / 平台数据目录不存在 / `--session` 不存在）——把脚本的报错原样转达，不要掩盖。
 
@@ -75,7 +75,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/session-extractor/scripts/extract.py" --pl
 |---|---|---|
 | `--mode structured\|flat\|both` | 输出形态（第 2 步） | `structured` |
 | `--platform claude\|codex\|opencode` | 你第 1 步自判的客户端（**首选显式传**）；省略则回退 env 自动探测 | 建议显式 |
-| `--out DIR` | 输出根目录 | `<cwd>/.session-log` |
+| `--out DIR` | 输出根目录 | `<cwd>/.session-extractor` |
 | `--session ID` | 指定某个 session | 当前会话（env） |
 | `--all` | 导出本项目（cwd）全部历史会话 | 否 |
 | `--config-dir DIR` | 覆盖平台配置/数据目录 | 按各平台 env+约定 |
@@ -86,7 +86,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/session-extractor/scripts/extract.py" --pl
 
 **structured（默认）**——贴合原版双树（结构对齐 `.agents-log`）：
 ```
-.session-log/
+.session-extractor/
 ├─ summary/<platform>/<时间戳>/                # 人读总览（单个本地时间戳文件夹）
 │  ├─ summary.md  usage.json
 │  └─ agents/<key>/{summary.md,usage.json}
@@ -102,7 +102,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/session-extractor/scripts/extract.py" --pl
 
 **flat**——每 session 一目录、每 agent 一个自包含大 md：
 ```
-.session-log/<platform>/<时间戳>/
+.session-extractor/<platform>/<时间戳>/
 ├─ index.md   main.md   <subagent>.md   usage.json
 ```
 （flat 也共用 `meta/state/`、`meta/index.md` 做状态与全局索引。）

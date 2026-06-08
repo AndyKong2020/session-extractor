@@ -133,7 +133,7 @@ class RenderTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name) / "cfg"
-        self.out = Path(self.tmp.name) / "session-log"
+        self.out = Path(self.tmp.name) / "session-extractor"
         self.env, self.cwd = _write_fixture(self.root)
         refs = claude.locate(self.env, self.cwd, None, False, config_dir=str(self.root))
         self.session = claude.parse(refs[0], env=self.env, config_dir=str(self.root))

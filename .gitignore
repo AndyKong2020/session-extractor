@@ -3,6 +3,6 @@ __pycache__/
 .DS_Store
 .pytest_cache/
 # 工具自身产出（不入库）
-.session-log/
+.session-extractor/
 # 旧 claude-session-log hook 插件的实时产物，非本项目交付
 .agents-log/

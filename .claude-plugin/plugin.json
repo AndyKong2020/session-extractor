@@ -1,7 +1,7 @@
 {
   "name": "session-extractor",
   "version": "0.1.0",
-  "description": "按需把当前 agent 会话记录转成 Markdown 到 .session-log/，支持 structured/flat 双形态、增量幂等、多 agent/subagent；跨 Claude Code / Codex / Opencode 三平台，自动判断当前客户端",
+  "description": "按需把当前 agent 会话记录转成 Markdown 到 .session-extractor/，支持 structured/flat 双形态、增量幂等、多 agent/subagent；跨 Claude Code / Codex / Opencode 三平台，自动判断当前客户端",
   "author": {
     "name": "AndyKong"
   },

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""session-extractor CLI：把当前 agent 会话记录转成 Markdown 到 .session-log/。
+"""session-extractor CLI：把当前 agent 会话记录转成 Markdown 到 .session-extractor/。
 
 用法（在某个 agent 会话内由 skill 触发，或手动）：
     python3 extract.py [--mode structured|flat|both] [--out DIR]
                        [--platform claude|codex|opencode] [--session ID | --all]
                        [--cwd DIR] [--config-dir DIR]
 
-默认：探测平台 -> 取当前 session（env 提供身份）-> structured 形态 -> 写到 <cwd>/.session-log。
+默认：探测平台 -> 取当前 session（env 提供身份）-> structured 形态 -> 写到 <cwd>/.session-extractor。
 多次触发幂等：同一 session 始终写到同一目录并整体覆盖刷新。
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ _USER_ERRORS = (NotImplementedError, FileNotFoundError, RuntimeError, ValueError
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="session-extractor", description=__doc__)
     parser.add_argument("--mode", choices=["structured", "flat", "both"], default="structured")
-    parser.add_argument("--out", help="输出根目录（默认 <cwd>/.session-log）")
+    parser.add_argument("--out", help="输出根目录（默认 <cwd>/.session-extractor）")
     parser.add_argument("--platform", choices=list(discover.VALID_PLATFORMS),
                         help="当前客户端（skill 场景由 agent 自行判断后显式传，首选）；省略则回退 env 自动探测")
     parser.add_argument("--session", help="指定 session id（默认取当前会话）")
@@ -44,7 +44,7 @@ def run(args: argparse.Namespace) -> int:
     env = dict(os.environ)
     # resolve() 解符号链接，便于与各平台存储里的 realpath（如 opencode 的 /private/...）匹配
     cwd = Path(args.cwd).expanduser().resolve() if args.cwd else Path.cwd().resolve()
-    out_root = Path(args.out).expanduser().resolve() if args.out else (cwd / ".session-log")
+    out_root = Path(args.out).expanduser().resolve() if args.out else (cwd / ".session-extractor")
 
     platform = discover.detect_platform(env, args.platform)
     if args.platform is None:

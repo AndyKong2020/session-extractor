@@ -1,6 +1,6 @@
 # session-extractor
 
-按需把 **agent 会话记录**转换成结构化 Markdown 到 `.session-log/` 目录的 **skill**。
+按需把 **agent 会话记录**转换成结构化 Markdown 到 `.session-extractor/` 目录的 **skill**。
 是 [`claude-session-log`](https://github.com/AndyKong2020/awesome-claude-infra/tree/main/plugins/claude-session-log) /
 [`opencode-session-log`](https://github.com/AndyKong2020/opencode-session-log) 的**简化、非实时、skill 化**版本：
 
@@ -31,14 +31,14 @@ python3 skills/session-extractor/scripts/extract.py [--platform claude|codex|ope
                                                     [--cwd DIR] [--config-dir DIR] [--quiet]
 ```
 
-平台由 agent **自行判断**并经 `--platform` 显式传入（skill 场景，最可靠、无嵌套歧义）；省略 `--platform` 时回退按环境变量自动探测（standalone 便利）。默认导出当前会话、`structured`、到 `<cwd>/.session-log`。详见
+平台由 agent **自行判断**并经 `--platform` 显式传入（skill 场景，最可靠、无嵌套歧义）；省略 `--platform` 时回退按环境变量自动探测（standalone 便利）。默认导出当前会话、`structured`、到 `<cwd>/.session-extractor`。详见
 [`skills/session-extractor/SKILL.md`](skills/session-extractor/SKILL.md)。
 
 ## 输出结构
 
 结构对齐 `.agents-log`（meta 双树 + 全局 index/state/locks 均在 `meta/` 下）：
 ```
-.session-log/
+.session-extractor/
 ├─ summary/<platform>/<时间戳>/                # structured：人读总览（单本地时间戳文件夹）
 │  ├─ summary.md  usage.json
 │  └─ agents/<key>/{summary.md,usage.json}
