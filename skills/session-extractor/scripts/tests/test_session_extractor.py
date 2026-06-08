@@ -1,7 +1,7 @@
 """session-extractor 单元测试（合成 fixture，无 live-session 回显噪音）。
 
 运行：
-    python3 -m unittest discover -s skills/session-log/scripts/tests
+    python3 -m unittest discover -s skills/session-extractor/scripts/tests
 """
 from __future__ import annotations
 

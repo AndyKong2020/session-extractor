@@ -1,9 +1,9 @@
 ---
-name: session-log
+name: session-extractor
 description: 把当前 agent 会话记录按需导出为 Markdown 到 .session-log/ 目录。当用户想保存、归档、快照当前会话，把对话/交互记录转成 markdown，生成 session log，或导出 transcript 时使用。支持 structured（默认，带 meta/summary 结构）与 flat（每 agent 一个大 md）两种形态、多次触发增量幂等、多 agent/subagent；跨 Claude Code / Codex / Opencode 三平台，自动判断当前客户端。
 ---
 
-# Session Log
+# Session Extractor
 
 把**当前会话**（或本项目历史会话）的原始记录转成结构化 Markdown，落到工作目录下的 `.session-log/`。
 非实时、无 hook：主动触发，可多次触发增量刷新（同一 session 始终写到同一目录，幂等覆盖）。
@@ -50,7 +50,7 @@ description: 把当前 agent 会话记录按需导出为 Markdown 到 .session-l
 ### 第 3 步 · 执行对应脚本
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/session-log/scripts/extract.py" --platform <platform> --mode <mode> [--all | --session <id>]
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/session-extractor/scripts/extract.py" --platform <platform> --mode <mode> [--all | --session <id>]
 ```
 
 `--platform` 用你第 1 步自行判断的结果显式传入。

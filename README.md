@@ -26,13 +26,13 @@
 由 skill 触发（描述匹配「导出/归档/快照当前会话为 markdown」），或手动运行：
 
 ```bash
-python3 skills/session-log/scripts/extract.py [--platform claude|codex|opencode] [--mode structured|flat|both]
-                                              [--session ID | --all] [--out DIR]
-                                              [--cwd DIR] [--config-dir DIR] [--quiet]
+python3 skills/session-extractor/scripts/extract.py [--platform claude|codex|opencode] [--mode structured|flat|both]
+                                                    [--session ID | --all] [--out DIR]
+                                                    [--cwd DIR] [--config-dir DIR] [--quiet]
 ```
 
 平台由 agent **自行判断**并经 `--platform` 显式传入（skill 场景，最可靠、无嵌套歧义）；省略 `--platform` 时回退按环境变量自动探测（standalone 便利）。默认导出当前会话、`structured`、到 `<cwd>/.session-log`。详见
-[`skills/session-log/SKILL.md`](skills/session-log/SKILL.md)。
+[`skills/session-extractor/SKILL.md`](skills/session-extractor/SKILL.md)。
 
 ## 输出结构
 
@@ -57,7 +57,7 @@ python3 skills/session-log/scripts/extract.py [--platform claude|codex|opencode]
 ## 架构
 
 ```
-skills/session-log/scripts/
+skills/session-extractor/scripts/
 ├─ extract.py                 # CLI 入口与编排
 └─ sessionlog/
    ├─ ir.py                   # 归一化中间表示 Session/Agent/Event/Block/Usage
@@ -83,7 +83,7 @@ skills/session-log/scripts/
 ## 测试
 
 ```bash
-python3 -m unittest discover -s skills/session-log/scripts/tests
+python3 -m unittest discover -s skills/session-extractor/scripts/tests
 ```
 
 ## 平台支持
