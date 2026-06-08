@@ -265,6 +265,37 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertEqual(len([p for p in (self.out / "summary").iterdir() if p.is_dir()]), 1)
 
+    def test_incremental_growth_idempotent(self):
+        # 增量幂等（内容增长）：同一 session 追加事件后重跑，仍写同一目录、覆盖刷新、
+        # 不漂移、不堆目录、.owner 稳定，新内容反映、外溢 artifact 刷新。
+        st = {}
+        layout.run_structured(self.session, self.out, st)
+        sdir = st["structured"]["summary_dir"]
+        mdir = st["structured"]["meta_session_dir"]
+        owner0 = (self.out / sdir / ".owner").read_text(encoding="utf-8")
+        # 模拟会话增长：main 追加一段会外溢的大输出 + 一个可识别标记
+        main = self.session.main_agent()
+        big = "Z" * 5000
+        last_ts = main.events[-1].timestamp
+        main.events.append(Event(seq=500, timestamp=last_ts, kind=KIND_USER, role="user", is_main=True,
+                                 blocks=[Block(type=BLOCK_TOOL_RESULT, tool_use_id="g", value=big)]))
+        main.events.append(Event(seq=501, timestamp=last_ts, kind=KIND_USER, role="user", is_main=True,
+                                 blocks=[Block(type=BLOCK_TEXT, text="NEW_INCREMENTAL_MARKER")]))
+        layout.run_structured(self.session, self.out, st)  # 复用 state -> 增量刷新
+        # 1) 路径不漂移
+        self.assertEqual(st["structured"]["summary_dir"], sdir)
+        self.assertEqual(st["structured"]["meta_session_dir"], mdir)
+        # 2) summary 仍只 1 个时间戳目录（不堆、无碰撞后缀）
+        self.assertEqual(len([p for p in (self.out / "summary").iterdir() if p.is_dir()]), 1)
+        # 3) .owner 不变
+        self.assertEqual((self.out / sdir / ".owner").read_text(encoding="utf-8"), owner0)
+        # 4) 新内容反映在详细时间线
+        detail = (self.out / mdir / "agents" / "main" / "session.md").read_text(encoding="utf-8")
+        self.assertIn("NEW_INCREMENTAL_MARKER", detail)
+        # 5) 增长的大输出外溢到 meta artifacts（覆盖刷新生效）
+        rendered = [f for f in (self.out / mdir / "artifacts" / "main" / "rendered").iterdir() if f.is_file()]
+        self.assertTrue(any(f.read_text(encoding="utf-8") == big for f in rendered))
+
     def test_stamp_collision_no_clobber(self):
         # 回归：两会话 started_at 同秒、不同 sid 时，summary 不互毁（碰撞自动加 __<sid> 后缀）。
         A = self.session  # claude / SID，含 main + explore-1
