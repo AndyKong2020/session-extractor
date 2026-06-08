@@ -15,7 +15,7 @@ from typing import Any
 from . import render as R
 from .ir import AGENT_SUBAGENT, KIND_ASSISTANT, KIND_META, KIND_USER, Agent, Session
 from .state import STATE_VERSION
-from .util import format_timestamp, utcnow
+from .util import format_timestamp, slugify, utcnow
 
 
 def state_key(session: Session) -> str:
@@ -173,9 +173,12 @@ def run_structured(session: Session, out_root: Path, state: dict[str, Any]) -> s
     meta_dir_rel = st.get("meta_session_dir") or f"meta/sessions/{yyyy}/{mm}/{session.session_id}"
     # summary 用单个本地时间戳文件夹（对齐 .agents-log），不再 YYYY/MM/<sid> 多层、无 platform 层。
     # 确定性 + state 复用 + 无 _unique_dir -> state 丢失也不漂移、不堆 -02（见 fail-loud 原则）。
-    summary_dir_rel = st.get("summary_dir") or f"summary/{_stamp(session)}"
+    # 碰撞防护：常态纯时间戳；若该目录已被别的 session 占用（同秒碰撞）则加 __<sid> 后缀，避免互毁。
+    summary_dir_rel = st.get("summary_dir") or _claim_stamp_dir(
+        out_root, f"summary/{_stamp(session)}", state_key(session), session.session_id)
     meta_dir = out_root / meta_dir_rel
     summary_dir = out_root / summary_dir_rel
+    _write_owner(summary_dir, state_key(session))
 
     # 幂等收敛：清掉上一轮写过、本轮已不在的 agent 子目录（agent 集合缩小/key 重排）。
     keys = {a.key for a in session.agents}
@@ -287,8 +290,11 @@ def build_flat_index(session: Session, path: Path, agent_files: dict[str, str]) 
 def run_flat(session: Session, out_root: Path, state: dict[str, Any]) -> str:
     st = state.get("flat", {}) if isinstance(state.get("flat"), dict) else {}
     # flat 用单个本地时间戳文件夹（与 summary 一致）：out_root 下单层时间戳，无 platform 层。
-    dir_rel = st.get("flat_session_dir") or f"{_stamp(session)}"
+    # 同 summary 的碰撞防护：被别的 session 占用则加 __<sid> 后缀。
+    dir_rel = st.get("flat_session_dir") or _claim_stamp_dir(
+        out_root, _stamp(session), state_key(session), session.session_id)
     sdir = out_root / dir_rel
+    _write_owner(sdir, state_key(session))
 
     # 幂等收敛：清孤儿 artifacts/<key> 与孤儿 <key>.md（agent 集合缩小/key 重排）。
     keys = {a.key for a in session.agents}
@@ -381,6 +387,28 @@ def write_global_index(out_root: Path, load_state) -> Path:
 
 
 # ============================================================ 私有
+
+OWNER_FILE = ".owner"
+
+
+def _claim_stamp_dir(out_root: Path, rel_base: str, owner_key: str, sid: str) -> str:
+    """为 summary/flat 分配时间戳目录：常态纯时间戳（对齐 .agents-log）。
+    若该目录已被【别的 session】占用（.owner 不符），加 __<sid> 后缀，避免两会话同秒
+    （started_at 撞同一秒）时互相覆盖 root 产物 / 误删对方 agent 目录。meta 树按 sid 命名本就不撞。"""
+    for rel in (rel_base, f"{rel_base}__{slugify(sid)}"):
+        d = out_root / rel
+        if not d.exists():
+            return rel
+        owner = d / OWNER_FILE
+        if owner.is_file() and owner.read_text(encoding="utf-8").strip() == owner_key:
+            return rel  # 自己上次写的（state 丢失重建），复用不漂移
+    raise RuntimeError(f"无法为 {rel_base} 分配唯一时间戳目录（.owner 冲突，owner={owner_key}）")
+
+
+def _write_owner(directory: Path, owner_key: str) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / OWNER_FILE).write_text(owner_key + "\n", encoding="utf-8")
+
 
 def _reset(path: Path) -> Path:
     R.reset_dir(path)

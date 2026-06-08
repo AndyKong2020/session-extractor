@@ -117,3 +117,4 @@ summary/agent summary 行为对齐 `.agents-log`：每段超阈值（文本 4000
 - 平台与 session 身份**优先取自继承的环境变量**；缺权威信号时**直接报错**并提示用 `--session`，不静默猜测。
 - 大段文本 / 结构化对象 / base64 图片超阈值会**外溢**成 `rendered/` 文件，正文留摘要+相对链接。
 - 坏数据不致命：无法解析的行计入 `parse_warnings` 并在文档里提示，不静默丢弃。
+- **同秒碰撞防护**：summary/flat 用时间戳目录名；两会话 `started_at` 撞同一秒时，后到者靠各目录的 `.owner`（`platform__sid`）识别归属、自动加 `__<sid>` 后缀，绝不互毁（meta 树按 sid 命名本就不撞）。

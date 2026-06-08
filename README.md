@@ -54,6 +54,8 @@ python3 skills/session-extractor/scripts/extract.py [--platform claude|codex|ope
    ├─ index.md  main.md  <subagent>.md  usage.json
 ```
 
+> summary/flat 的每个时间戳目录带一个 `.owner` 标记（`platform__sid`）：两会话 `started_at` 撞同一秒时，后到者自动加 `__<sid>` 后缀，避免互相覆盖/误删（meta 按 sid 命名本就不撞）。
+
 ## 架构
 
 ```

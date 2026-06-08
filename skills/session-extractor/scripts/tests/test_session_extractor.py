@@ -265,6 +265,41 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertEqual(len([p for p in (self.out / "summary").iterdir() if p.is_dir()]), 1)
 
+    def test_stamp_collision_no_clobber(self):
+        # 回归：两会话 started_at 同秒、不同 sid 时，summary 不互毁（碰撞自动加 __<sid> 后缀）。
+        A = self.session  # claude / SID，含 main + explore-1
+        B = dataclasses.replace(
+            self.session,
+            session_id="99999999-aaaa-bbbb-cccc-dddddddddddd",
+            platform="codex",
+            agents=[a for a in self.session.agents if a.key == "main"],  # B 只有 main
+        )
+        layout.run_structured(A, self.out, {})
+        a_sub = next(p for p in (self.out / "summary").rglob("summary.md") if p.parent.name == "explore-1")
+        self.assertTrue(a_sub.is_file())
+        layout.run_structured(B, self.out, {})  # 同 started_at -> 同 stamp -> 碰撞
+        self.assertTrue(a_sub.is_file(), "碰撞时 A 的 subagent 产物被误删")
+        sum_dirs = sorted(p.name for p in (self.out / "summary").iterdir() if p.is_dir())
+        self.assertEqual(len(sum_dirs), 2, f"碰撞应产生 2 个独立 summary 目录，实际 {sum_dirs}")
+        # B 的目录带 sid 后缀；A 的是纯时间戳
+        self.assertTrue(any("__99999999" in d for d in sum_dirs), sum_dirs)
+        # 各自 .owner 标记归属正确
+        a_owner = (self.out / "summary" / next(d for d in sum_dirs if "__" not in d) / ".owner").read_text()
+        self.assertIn(f"claude__{SID}", a_owner)
+
+    def test_collision_idempotent_reuse_owner(self):
+        # 碰撞后重跑 B（带 state），应复用带后缀目录、不再新建，且认得自己的 .owner。
+        A = self.session
+        B = dataclasses.replace(self.session, session_id="99999999-aaaa-bbbb-cccc-dddddddddddd",
+                                platform="codex", agents=[a for a in self.session.agents if a.key == "main"])
+        layout.run_structured(A, self.out, {})
+        stB = {}
+        layout.run_structured(B, self.out, stB)
+        first = stB["structured"]["summary_dir"]
+        layout.run_structured(B, self.out, stB)  # 复用 state
+        self.assertEqual(stB["structured"]["summary_dir"], first)
+        self.assertEqual(len([p for p in (self.out / "summary").iterdir() if p.is_dir()]), 2)
+
     def test_summary_artifacts_reuse_meta(self):
         # 对齐 .agents-log：summary 树自身不产 artifacts/rendered；超阈值外溢复用 meta 树的 rendered（同内容去重）。
         big = "X" * 5000  # 超过 SUMMARY_VALUE_INLINE_LIMIT(1200) 与 TOOL_RESULT_INLINE_LIMIT(4000)
